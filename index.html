@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="JJ Index">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0E261F">
+<title>JJ Index</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --turf:      #16352B;
+    --turf-deep: #0E261F;
+    --turf-2:    #2F6B4F;
+    --paper:     #F6F1E4;
+    --paper-2:   #ECE3CC;
+    --line:      #D6CBA9;
+    --ink:       #221F18;
+    --ink-soft:  #6B6552;
+    --flag:      #B23A24;
+    --gold:      #C99A3E;
+    --tab-h:     56px;
+    --safe-t:    env(safe-area-inset-top, 0px);
+    --safe-b:    env(safe-area-inset-bottom, 0px);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: none;
+    background: var(--turf-deep);
+    font-family: 'Inter', sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Shell ── */
+  .shell {
+    position: fixed; inset: 0;
+    max-width: 480px;
+    margin: 0 auto;
+    background: var(--turf-deep);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  .header {
+    flex-shrink: 0;
+    padding-top: var(--safe-t);
+    background: var(--turf);
+    text-align: center;
+    padding-bottom: 18px;
+  }
+
+  .header-inner {
+    padding: 18px 20px 0;
+  }
+
+  .header-name {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(246,241,228,0.50);
+    margin-bottom: 4px;
+  }
+
+  .header-title {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--paper);
+    letter-spacing: -0.01em;
+  }
+
+  /* Scorecard tag */
+  .tag-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 14px;
+  }
+  .tag-pin {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--paper);
+    box-shadow: 0 0 0 3px rgba(246,241,228,0.15);
+  }
+  .tag-string {
+    width: 1.5px; height: 20px;
+    background: rgba(246,241,228,0.35);
+  }
+  .tag {
+    background: var(--paper);
+    width: 180px;
+    border-radius: 6px 6px 6px 22px;
+    position: relative;
+    padding: 18px 14px 14px;
+    box-shadow: 0 14px 28px -10px rgba(0,0,0,0.55);
+    transform-origin: top center;
+    animation: sway 7s ease-in-out infinite alternate;
+  }
+  .tag::before {
+    content: '';
+    position: absolute;
+    top: 8px; left: 14px;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--turf);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+  }
+  @keyframes sway {
+    0%   { transform: rotate(-2.5deg); }
+    100% { transform: rotate(2.5deg); }
+  }
+  @media (prefers-reduced-motion: reduce) { .tag { animation: none; } }
+
+  .tag-index {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 46px;
+    line-height: 1;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .tag-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-top: 5px;
+  }
+  .tag-label.estimate { color: var(--gold); }
+
+  .header-sub {
+    margin-top: 10px;
+    font-size: 11.5px;
+    color: rgba(246,241,228,0.60);
+    line-height: 1.4;
+    padding: 0 24px;
+  }
+
+  /* ── Body (scrollable content area) ── */
+  .body {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    background: var(--paper);
+    border-radius: 20px 20px 0 0;
+    margin-top: -1px;
+  }
+
+  .tab-pane {
+    position: absolute; inset: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    display: none;
+    padding: 22px 18px 16px;
+  }
+  .tab-pane.active { display: block; }
+
+  /* ── Tab bar ── */
+  .tabbar {
+    flex-shrink: 0;
+    display: flex;
+    background: var(--paper);
+    border-top: 1px solid var(--line);
+    padding-bottom: var(--safe-b);
+    height: calc(var(--tab-h) + var(--safe-b));
+  }
+
+  .tab-btn {
+    flex: 1;
+    border: none;
+    background: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 0;
+    cursor: pointer;
+    color: var(--ink-soft);
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 500;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.15s;
+  }
+  .tab-btn.active { color: var(--turf-2); }
+  .tab-icon { font-size: 20px; line-height: 1; }
+
+  /* ── Section eyebrow ── */
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .eyebrow::after {
+    content: ''; flex: 1;
+    height: 1px; background: var(--line);
+  }
+
+  /* ── Form card ── */
+  .card {
+    background: var(--paper-2);
+    border: 1px dashed var(--line);
+    border-radius: 14px;
+    padding: 16px 14px 14px;
+    margin-bottom: 16px;
+  }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .field-full { grid-column: 1 / -1; }
+
+  label {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+  }
+
+  input, select {
+    width: 100%;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 10px;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  select { font-family: 'Inter', sans-serif; font-size: 14px; }
+  input:focus, select:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+
+  .btn-primary {
+    width: 100%;
+    border: none;
+    border-radius: 999px;
+    background: var(--turf-2);
+    color: var(--paper);
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    padding: 13px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s, transform 0.1s;
+    margin-top: 4px;
+  }
+  .btn-primary:active { transform: scale(0.98); background: var(--turf); }
+  .btn-primary:disabled { background: var(--line); color: var(--ink-soft); }
+
+  .btn-ghost {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink-soft);
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 11px;
+    cursor: pointer;
+    margin-top: 8px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-ghost:active { background: var(--paper-2); }
+
+  .btn-link {
+    display: block; width: 100%; text-align: center;
+    border: none; background: none;
+    color: var(--turf-2);
+    font-family: 'Inter', sans-serif;
+    font-weight: 600; font-size: 13px;
+    padding: 10px; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .form-msg {
+    font-size: 11.5px; color: var(--flag);
+    margin-top: 7px; min-height: 14px;
+  }
+
+  /* ── Ledger ── */
+  .ledger-head {
+    display: grid;
+    grid-template-columns: 1fr 46px 54px 28px;
+    gap: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    padding: 0 4px 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  .ledger-head span:nth-child(2),
+  .ledger-head span:nth-child(3) { text-align: right; }
+
+  .round-row {
+    display: grid;
+    grid-template-columns: 1fr 46px 54px 28px;
+    gap: 6px;
+    align-items: center;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .round-row.counts { background: rgba(201,154,62,0.07); }
+
+  .round-date {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; color: var(--ink-soft);
+  }
+  .round-course {
+    display: block;
+    font-size: 13px; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .round-score, .round-diff {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px; text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .round-diff { color: var(--ink-soft); }
+  .round-row.counts .round-diff { color: var(--gold); font-weight: 600; }
+
+  .round-delete {
+    border: none; background: none;
+    color: var(--ink-soft); font-size: 18px; line-height: 1;
+    cursor: pointer; padding: 4px; justify-self: end;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .round-delete:active { color: var(--flag); }
+
+  .empty-state {
+    font-size: 13px; font-style: italic; color: var(--ink-soft);
+    text-align: center; padding: 24px 4px;
+  }
+
+  .counts-key {
+    font-size: 11px; color: var(--ink-soft); margin-top: 10px;
+  }
+  .counts-key .dot {
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--gold); margin-right: 5px; vertical-align: 1px;
+  }
+
+  /* ── Courses ── */
+  .course-row {
+    display: grid;
+    grid-template-columns: 1fr 32px 32px;
+    gap: 4px; align-items: center;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .course-name { font-size: 13px; font-weight: 600; }
+  .course-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; color: var(--ink-soft); margin-top: 2px;
+  }
+  .icon-btn {
+    border: none; background: none;
+    color: var(--ink-soft); font-size: 16px;
+    cursor: pointer; padding: 6px; justify-self: end;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .icon-btn:active { color: var(--turf-2); }
+  .icon-btn.danger:active { color: var(--flag); }
+
+  /* ── Info tab ── */
+  .info-block {
+    font-size: 12.5px; line-height: 1.65; color: var(--ink-soft);
+  }
+  .info-block strong { color: var(--ink); }
+  .info-block + .info-block { margin-top: 20px; }
+  .info-block h3 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--ink-soft);
+    margin-bottom: 7px;
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-inner">
+      <p class="header-name">Jacob Janssen</p>
+      <p class="header-title">JJ Index</p>
+    </div>
+    <div class="tag-wrap">
+      <div class="tag-pin"></div>
+      <div class="tag-string"></div>
+      <div class="tag">
+        <div class="tag-index" id="indexValue">—</div>
+        <div class="tag-label" id="indexLabel">Handicap Index</div>
+      </div>
+    </div>
+    <p class="header-sub" id="indexSub">Loading…</p>
+  </div>
+
+  <!-- BODY -->
+  <div class="body">
+
+    <!-- TAB: POST SCORE -->
+    <div class="tab-pane active" id="pane-post">
+      <div class="eyebrow">Post a score</div>
+      <form class="card" id="roundForm" novalidate>
+        <div class="field-row">
+          <div>
+            <label for="rDate">Date</label>
+            <input type="date" id="rDate" required>
+          </div>
+          <div>
+            <label for="rScore">Score</label>
+            <input type="number" id="rScore" min="18" max="200" step="1" placeholder="92" required>
+          </div>
+        </div>
+        <div class="field-row" style="margin-bottom:0;">
+          <div class="field-full">
+            <label for="rCourseSelect">Course</label>
+            <select id="rCourseSelect" required></select>
+          </div>
+        </div>
+        <button type="submit" class="btn-primary" id="submitBtn">Post score</button>
+        <p class="form-msg" id="formMsg"></p>
+      </form>
+    </div>
+
+    <!-- TAB: HISTORY -->
+    <div class="tab-pane" id="pane-history">
+      <div class="eyebrow">Scoring record</div>
+      <div class="ledger-head">
+        <span>Round</span><span>Score</span><span>Diff.</span><span></span>
+      </div>
+      <div id="roundsList"></div>
+      <p class="counts-key" id="countsKey" style="display:none;">
+        <span class="dot"></span>Counts toward current index
+      </p>
+    </div>
+
+    <!-- TAB: COURSES -->
+    <div class="tab-pane" id="pane-courses">
+      <div class="eyebrow">My courses</div>
+      <div id="coursesList"></div>
+      <button type="button" class="btn-link" id="addCourseToggle">+ Add a course</button>
+      <form id="courseForm" class="card" style="display:none; margin-top:10px;" novalidate>
+        <input type="hidden" id="cEditId">
+        <div class="field-row">
+          <div class="field-full">
+            <label for="cName">Course name</label>
+            <input type="text" id="cName" placeholder="e.g. Hawktree Golf Club" required>
+          </div>
+        </div>
+        <div class="field-row" style="margin-bottom:0;">
+          <div>
+            <label for="cRating">Course rating</label>
+            <input type="number" id="cRating" min="50" max="90" step="0.1" placeholder="70.8" required>
+          </div>
+          <div>
+            <label for="cSlope">Slope rating</label>
+            <input type="number" id="cSlope" min="55" max="155" step="1" placeholder="113" required>
+          </div>
+        </div>
+        <button type="submit" class="btn-primary" id="courseSubmitBtn">Save course</button>
+        <button type="button" class="btn-ghost" id="cancelCourse">Cancel</button>
+        <p class="form-msg" id="courseMsg"></p>
+      </form>
+    </div>
+
+    <!-- TAB: INFO -->
+    <div class="tab-pane" id="pane-info">
+      <div class="eyebrow">How it works</div>
+      <div class="info-block">
+        <h3>Score Differential</h3>
+        Each round's differential = <strong>(113 ÷ Slope) × (Score − Course Rating)</strong>. Your index averages your lowest differentials from the last 20 rounds using the WHS sliding scale.
+      </div>
+      <div class="info-block">
+        <h3>Rounds needed</h3>
+        <strong>1–2 rounds:</strong> shows a rough estimate (~) — just the average differential, no WHS adjustment.<br><br>
+        <strong>3+ rounds:</strong> full WHS calculation kicks in, scaling from best-1-of-3 up to best-8-of-20.
+      </div>
+      <div class="info-block">
+        <h3>Your courses</h3>
+        <strong>Wildwood CC — Blue tees</strong> (Burlington, ND): Rating 66.3 · Slope 104<br><br>
+        <strong>Painted Woods — Gold tees</strong> (Washburn, ND): Rating 69.7 · Slope 113<br><br>
+        Tap <strong>Courses</strong> to correct these if your scorecard shows different numbers.
+      </div>
+      <div class="info-block">
+        <h3>Disclaimer</h3>
+        This is <strong>not</strong> an official GHIN Handicap Index and isn't connected to the USGA. Playing-conditions adjustments and soft/hard caps are not applied.
+      </div>
+      <div class="info-block">
+        <h3>Save to home screen</h3>
+        Open this page in <strong>Safari</strong>, tap the Share icon, then <strong>Add to Home Screen</strong> to install as an app.
+      </div>
+    </div>
+
+  </div><!-- /body -->
+
+  <!-- TAB BAR -->
+  <nav class="tabbar">
+    <button class="tab-btn active" data-tab="post">
+      <span class="tab-icon">⛳</span>Post
+    </button>
+    <button class="tab-btn" data-tab="history">
+      <span class="tab-icon">📋</span>History
+    </button>
+    <button class="tab-btn" data-tab="courses">
+      <span class="tab-icon">🗺</span>Courses
+    </button>
+    <button class="tab-btn" data-tab="info">
+      <span class="tab-icon">ℹ️</span>Info
+    </button>
+  </nav>
+
+</div><!-- /shell -->
+
+<script>
+  /* ── PWA: icon + manifest ── */
+  (function(){
+    const S = 512, cv = document.createElement('canvas');
+    cv.width = cv.height = S;
+    const c = cv.getContext('2d');
+    function clip(r){ c.beginPath(); c.roundRect(0,0,S,S,r); c.clip(); }
+
+    c.save(); clip(96);
+
+    const bg = c.createLinearGradient(0,0,0,S);
+    bg.addColorStop(0,'#0a1f18'); bg.addColorStop(1,'#16352B');
+    c.fillStyle=bg; c.fillRect(0,0,S,S);
+
+    const glow=c.createRadialGradient(S/2,S*.38,20,S/2,S*.38,210);
+    glow.addColorStop(0,'rgba(201,154,62,.18)'); glow.addColorStop(1,'rgba(201,154,62,0)');
+    c.fillStyle=glow; c.fillRect(0,0,S,S);
+
+    const fw=c.createLinearGradient(0,S*.58,0,S);
+    fw.addColorStop(0,'#1e4d38'); fw.addColorStop(1,'#122e22');
+    c.fillStyle=fw; c.beginPath();
+    c.ellipse(S/2,S*.72,S*.78,S*.46,0,0,Math.PI); c.fill();
+
+    c.fillStyle='rgba(56,140,88,.28)'; c.beginPath();
+    c.ellipse(S*.5,S*.75,S*.30,S*.10,0,0,Math.PI*2); c.fill();
+
+    const px=S*.57,pt=S*.24,pb=S*.72;
+    c.strokeStyle='#E8D5A3'; c.lineWidth=9; c.lineCap='round';
+    c.beginPath(); c.moveTo(px,pt); c.lineTo(px,pb); c.stroke();
+
+    c.fillStyle='#B23A24'; c.beginPath();
+    c.moveTo(px,pt); c.lineTo(px+68,pt+30); c.lineTo(px,pt+60);
+    c.closePath(); c.fill();
+
+    const bx=S*.34,by=S*.74,br=26;
+    const bs=c.createRadialGradient(bx+4,by+6,2,bx+4,by+6,br*1.4);
+    bs.addColorStop(0,'rgba(0,0,0,.35)'); bs.addColorStop(1,'rgba(0,0,0,0)');
+    c.fillStyle=bs; c.beginPath(); c.arc(bx+4,by+8,br*1.4,0,Math.PI*2); c.fill();
+    const bg2=c.createRadialGradient(bx-8,by-8,2,bx,by,br);
+    bg2.addColorStop(0,'#fff'); bg2.addColorStop(.6,'#eeeae0'); bg2.addColorStop(1,'#ccc8bc');
+    c.fillStyle=bg2; c.beginPath(); c.arc(bx,by,br,0,Math.PI*2); c.fill();
+    c.fillStyle='rgba(160,155,145,.55)';
+    [[-10,-10],[2,-14],[12,-7],[14,4],[6,13],[-6,13],[-14,4],[-13,-5],[0,0],[10,-2],[-4,6],[6,4]].forEach(([dx,dy])=>{
+      c.beginPath(); c.arc(bx+dx,by+dy,2.2,0,Math.PI*2); c.fill();
+    });
+
+    c.strokeStyle='rgba(201,154,62,.40)'; c.lineWidth=1.5;
+    c.beginPath(); c.moveTo(S*.16,S*.615); c.lineTo(S*.84,S*.615); c.stroke();
+
+    c.save();
+    c.shadowColor='rgba(0,0,0,.55)'; c.shadowBlur=18; c.shadowOffsetX=3; c.shadowOffsetY=4;
+    c.fillStyle='#F6F1E4'; c.font='bold 192px Georgia,serif';
+    c.textAlign='center'; c.textBaseline='alphabetic';
+    c.fillText('JJ',S*.46,S*.565); c.restore();
+
+    const lg=c.createLinearGradient(S*.2,S*.35,S*.6,S*.60);
+    lg.addColorStop(0,'#F6F1E4'); lg.addColorStop(.45,'#fff8e8');
+    lg.addColorStop(.55,'#E8D5A3'); lg.addColorStop(1,'#C99A3E');
+    c.fillStyle=lg; c.font='bold 192px Georgia,serif';
+    c.textAlign='center'; c.textBaseline='alphabetic';
+    c.fillText('JJ',S*.46,S*.565);
+
+    c.restore(); c.save(); clip(96);
+    c.strokeStyle='rgba(201,154,62,.55)'; c.lineWidth=6;
+    c.strokeRect(3,3,S-6,S-6); c.restore();
+
+    const ico = cv.toDataURL('image/png');
+    const al = document.createElement('link'); al.rel='apple-touch-icon'; al.href=ico; document.head.appendChild(al);
+    const fl = document.createElement('link'); fl.rel='icon'; fl.href=ico; document.head.appendChild(fl);
+    const mf = { name:'JJ Index — Handicap Tracker', short_name:'JJ Index',
+      description:"Jacob Janssen's personal golf handicap tracker",
+      start_url:'.', display:'standalone',
+      background_color:'#0E261F', theme_color:'#0E261F', orientation:'portrait',
+      icons:[{src:ico,sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
+    const bl = document.createElement('link'); bl.rel='manifest';
+    bl.href=URL.createObjectURL(new Blob([JSON.stringify(mf)],{type:'application/manifest+json'}));
+    document.head.appendChild(bl);
+  })();
+
+  /* ── Storage ── */
+  const RK='rounds_jj', CK='courses_jj';
+  const lsGet = k=>{ try{ return localStorage.getItem(k); }catch(e){ return null; } };
+  const lsSet = (k,v)=>{ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } };
+
+  /* ── State ── */
+  let rounds=[], courses=[];
+  const DEFAULT_COURSES=[
+    {id:'wildwood-blue', name:'Wildwood CC — Blue tees (Burlington, ND)', rating:66.3, slope:104},
+    {id:'painted-gold',  name:'Painted Woods — Gold tees (Washburn, ND)', rating:69.7, slope:113}
+  ];
+
+  /* ── DOM refs ── */
+  const $=id=>document.getElementById(id);
+  const indexValueEl=$('indexValue'), indexLabelEl=$('indexLabel'), indexSubEl=$('indexSub');
+  const roundsListEl=$('roundsList'), countsKeyEl=$('countsKey'), formMsgEl=$('formMsg');
+  const form=$('roundForm'), courseSelect=$('rCourseSelect'), submitBtn=$('submitBtn');
+  const coursesListEl=$('coursesList'), courseForm=$('courseForm');
+  const cEditIdEl=$('cEditId'), cNameEl=$('cName'), cRatingEl=$('cRating'), cSlopeEl=$('cSlope');
+  const courseMsgEl=$('courseMsg');
+
+  $('rDate').value = new Date().toISOString().slice(0,10);
+
+  /* ── Tabs ── */
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      $('pane-'+btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  /* ── WHS table ── */
+  function tableEntry(n){
+    if(n<=3) return{use:1,adj:-2.0};
+    if(n===4) return{use:1,adj:-1.0};
+    if(n===5) return{use:1,adj:0};
+    if(n===6) return{use:2,adj:-1.0};
+    if(n<=8)  return{use:2,adj:0};
+    if(n<=11) return{use:3,adj:0};
+    if(n<=14) return{use:4,adj:0};
+    if(n<=16) return{use:5,adj:0};
+    if(n<=18) return{use:6,adj:0};
+    if(n===19)return{use:7,adj:0};
+    return{use:8,adj:0};
+  }
+
+  function diff(score,rating,slope){
+    return Math.round(((113/slope)*(score-rating))*10)/10;
+  }
+
+  function computeIndex(){
+    if(!rounds.length) return{n:0};
+    const pool=[...rounds].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,20);
+    const n=pool.length;
+    const wd=pool.map(r=>({...r,diff:diff(r.score,r.rating,r.slope)}));
+    if(n<3){
+      const avg=wd.reduce((s,r)=>s+r.diff,0)/n;
+      return{n,index:Math.round(avg*10)/10,isEstimate:true,usedIds:wd.map(r=>r.id)};
+    }
+    const e=tableEntry(n);
+    const used=[...wd].sort((a,b)=>a.diff-b.diff).slice(0,e.use);
+    let idx=Math.round((used.reduce((s,r)=>s+r.diff,0)/used.length+e.adj)*10)/10;
+    if(idx>54)idx=54;
+    return{n,index:idx,isEstimate:false,usedIds:used.map(u=>u.id)};
+  }
+
+  function fmtIdx(v){ return v<0?'+'+Math.abs(v).toFixed(1):v.toFixed(1); }
+  function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+  /* ── Render hero ── */
+  function renderHero(){
+    const r=computeIndex();
+    if(r.n===0){
+      indexValueEl.textContent='—'; indexLabelEl.className='tag-label';
+      indexLabelEl.textContent='Handicap Index';
+      indexSubEl.textContent='Post your first score to get started.';
+    } else if(r.isEstimate){
+      indexValueEl.textContent='~'+fmtIdx(r.index);
+      indexLabelEl.className='tag-label estimate'; indexLabelEl.textContent='Rough Estimate';
+      indexSubEl.textContent=(3-r.n)+' more round'+(3-r.n===1?'':'s')+' for your full index.';
+    } else {
+      indexValueEl.textContent=fmtIdx(r.index);
+      indexLabelEl.className='tag-label'; indexLabelEl.textContent='Handicap Index';
+      indexSubEl.textContent='Best rounds out of your last '+r.n+'.';
+    }
+    return r;
+  }
+
+  /* ── Render history ── */
+  function renderHistory(result){
+    const sorted=[...rounds].sort((a,b)=>b.date.localeCompare(a.date));
+    countsKeyEl.style.display=result.usedIds?.length?'block':'none';
+    if(!sorted.length){
+      roundsListEl.innerHTML='<p class="empty-state">No rounds yet.</p>'; return;
+    }
+    roundsListEl.innerHTML=sorted.map(r=>{
+      const d=diff(r.score,r.rating,r.slope);
+      const counts=result.usedIds?.includes(r.id);
+      const dl=new Date(r.date+'T12:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+      return`<div class="round-row${counts?' counts':''}">
+        <div><span class="round-date">${dl}</span><span class="round-course">${esc(r.courseName)}</span></div>
+        <span class="round-score">${r.score}</span>
+        <span class="round-diff">${d.toFixed(1)}</span>
+        <button class="round-delete" data-id="${r.id}">×</button>
+      </div>`;
+    }).join('');
+    roundsListEl.querySelectorAll('.round-delete').forEach(b=>
+      b.addEventListener('click',()=>deleteRound(b.dataset.id)));
+  }
+
+  /* ── Render courses ── */
+  function renderCourses(){
+    if(!courses.length){
+      coursesListEl.innerHTML='<p class="empty-state">No courses saved yet.</p>';
+    } else {
+      coursesListEl.innerHTML=courses.map(c=>`
+        <div class="course-row">
+          <div><div class="course-name">${esc(c.name)}</div>
+          <div class="course-meta">Rating ${c.rating.toFixed(1)} · Slope ${c.slope}</div></div>
+          <button class="icon-btn" data-edit="${c.id}">✎</button>
+          <button class="icon-btn danger" data-del="${c.id}">×</button>
+        </div>`).join('');
+      coursesListEl.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>openCourseForm(b.dataset.edit)));
+      coursesListEl.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>deleteCourse(b.dataset.del)));
+    }
+    const prev=courseSelect.value;
+    if(!courses.length){
+      courseSelect.innerHTML='<option value="">Add a course first</option>';
+      submitBtn.disabled=true;
+    } else {
+      courseSelect.innerHTML=courses.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+      submitBtn.disabled=false;
+      if(courses.some(c=>c.id===prev)) courseSelect.value=prev;
+    }
+  }
+
+  function render(){
+    const r=renderHero();
+    renderHistory(r);
+    renderCourses();
+  }
+
+  /* ── Course form ── */
+  function openCourseForm(editId){
+    courseMsgEl.textContent='';
+    if(editId){
+      const c=courses.find(c=>c.id===editId); if(!c) return;
+      cEditIdEl.value=c.id; cNameEl.value=c.name; cRatingEl.value=c.rating; cSlopeEl.value=c.slope;
+      $('courseSubmitBtn').textContent='Save changes';
+    } else {
+      cEditIdEl.value=''; cNameEl.value=''; cRatingEl.value=''; cSlopeEl.value='';
+      $('courseSubmitBtn').textContent='Save course';
+    }
+    courseForm.style.display='block'; cNameEl.focus();
+  }
+  function closeCourseForm(){ courseForm.style.display='none'; courseMsgEl.textContent=''; }
+  $('addCourseToggle').addEventListener('click',()=>openCourseForm(null));
+  $('cancelCourse').addEventListener('click',closeCourseForm);
+
+  courseForm.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const name=cNameEl.value.trim(), rating=parseFloat(cRatingEl.value), slope=parseFloat(cSlopeEl.value);
+    if(!name||isNaN(rating)||isNaN(slope)){courseMsgEl.textContent='Fill in every field.';return;}
+    if(slope<55||slope>155){courseMsgEl.textContent='Slope should be 55–155.';return;}
+    const editId=cEditIdEl.value;
+    if(editId){ const c=courses.find(c=>c.id===editId); if(c){c.name=name;c.rating=rating;c.slope=slope;} }
+    else { courses.push({id:crypto.randomUUID?.()??Date.now()+'-'+Math.random(),name,rating,slope}); }
+    closeCourseForm(); saveCourses(); render();
+  });
+
+  async function deleteCourse(id){ courses=courses.filter(c=>c.id!==id); saveCourses(); render(); }
+
+  /* ── Storage ── */
+  function saveRounds(){
+    if(!lsSet(RK,JSON.stringify(rounds))) formMsgEl.textContent='Could not save — check browser storage settings.';
+  }
+  function saveCourses(){ lsSet(CK,JSON.stringify(courses)); }
+
+  function loadRounds(){ try{ const v=lsGet(RK); rounds=v?JSON.parse(v):[]; }catch(e){ rounds=[]; } }
+  function loadCourses(){
+    try{
+      const v=lsGet(CK); courses=v?JSON.parse(v):null;
+      if(!courses){ courses=DEFAULT_COURSES.map(c=>({...c})); saveCourses(); }
+    }catch(e){ courses=DEFAULT_COURSES.map(c=>({...c})); }
+  }
+
+  async function deleteRound(id){ rounds=rounds.filter(r=>r.id!==id); saveRounds(); render(); }
+
+  /* ── Post score ── */
+  form.addEventListener('submit',e=>{
+    e.preventDefault(); formMsgEl.textContent='';
+    const date=$('rDate').value, courseId=courseSelect.value;
+    const score=parseInt($('rScore').value,10);
+    const course=courses.find(c=>c.id===courseId);
+    if(!date||!course||isNaN(score)){formMsgEl.textContent='Fill in every field.';return;}
+    rounds.push({id:crypto.randomUUID?.()??Date.now()+'-'+Math.random(),
+      date,score,courseId:course.id,courseName:course.name,rating:course.rating,slope:course.slope});
+    saveRounds(); render();
+    $('rScore').value=''; $('rDate').value=new Date().toISOString().slice(0,10);
+  });
+
+  /* ── Init ── */
+  loadCourses(); loadRounds(); render();
+</script>
+</body>
+</html>
